@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>From Dockerfiles to Ansible Container</title>
+    <meta charset="utf-8">
+    <style>
+      @import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+      body { font-family: 'Droid Serif'; }
+      h1, h2, h3, h4 {
+        font-family: 'Yanone Kaffeesatz';
+        font-weight: normal;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+      .remark-slide-content { font-size: 1.6em; }
+      .remark-slide-content h1 { font-size: 2.4em; }
+      .remark-slide-content h2 { font-size: 2.0em; }
+      .remark-slide-content h3 { font-size: 1.6em; }
+      .remark-slide-content h4 { font-size: 1.2em; }
+      .remark-code { font-size: 0.977em; }
+      .remark-slide-number { font-size: 0.8em; }
+      .remark-slide-content ul { line-height: 1.4em; }
+      .small { font-size: 0.7em; }
+      .columns-3-ul ul { columns: 3; }
+      img { max-width: 100%; }
+      blockquote {
+        font-style: italic;
+        color: #777;
+      }
+    </style>
+    <script src="https://use.fontawesome.com/1a2bc43b60.js"></script>
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, middle
+
+# From Dockerfiles to Ansible Container
+## Tomas Tomecek
+
+---
+
+# /whois
+## Tomáš Tomeček
+
+--
+
+ * hacker, developer, tinker, speaker, teacher
+
+ * contributing to *
+
+ * ~~ops~~ engineer
+
+???
+
+* Ask who is dev and ops; initiate applause for ops.
+
+--
+
+ * Red Hat
+
+ * tech lead for containerization team
+
+---
+
+# Agenda
+
+1. Dockerfile/docker-compose project.
+
+2. Transition.
+
+3. Ansible Container project.
+
+4. Container-enabled Ansible roles.
+
+5. Bright future.
+
+---
+
+# Requirements
+## For development setup and deployment
+
+* Easy to set up.
+
+  * With a single command.
+
+--
+
+* Consistent environment for every developer.
+
+  * Containers
+
+  * The deployment
+
+  * Tests
+
+???
+
+* Everyone is running the same version of webserver, database, compiler.
+* We also want to run run tests in a container.
+
+---
+
+# Requirements
+## For development setup and deployment (cont.)
+
+* Development and production environment.
+
+  * Developers want to iterate quickly.
+
+  * Production environment needs to be rock-solid.
+
+--
+
+  * BTW, we also need staging environment.
+
+???
+
+* Are these requirements sane?
+
+---
+
+# Dockerfile/docker-compose project
+## Description
+
+* Dockerfile (= custom image) for your application.
+
+--
+
+* Service images from Docker Hub.
+
+--
+
+* Deployment done with Compose file.
+  * Handcrafted
+
+---
+
+# Dockerfile/docker-compose project
+## Examples
+
+* Building the project:
+
+  ```bash
+  $ docker-compose build
+  ```
+
+* Running the project:
+
+  ```bash
+  $ docker-compose up
+  ```
+
+---
+
+# Dockerfile/docker-compose project
+## Sample Dockerfile
+
+```dockerfile
+FROM fedora:25
+RUN dnf install -y git python-pip gcc python-devel \
+    postgresql-devel redhat-rpm-config python2-pytest npm && \
+    npm install -g bower
+
+ARG USER_ID=1000
+RUN useradd -o -u ${USER_ID} django && \
+    mkdir -p /opt/app && \
+    chown django:django /opt/app
+USER django
+```
+
+---
+
+# Dockerfile/docker-compose project
+## Sample Dockerfile (cont.)
+
+```dockerfile
+WORKDIR /opt/app
+COPY ./requirements.txt /opt/app/
+RUN pip install --user -r ./requirements.txt
+COPY ./requirements-devel.txt /opt/app/
+RUN  pip install --user -r ./requirements-devel.txt
+
+COPY ./install_static_data.sh /opt/app
+COPY ./bower.json /opt/app
+RUN ./install_static_data.sh
+```
+
+---
+
+# Dockerfile/docker-compose project
+## Sample Dockerfile (cont.)
+
+```dockerfile
+COPY . /opt/app/
+USER root
+RUN chown -R django:django .
+USER django
+
+# database needs to be set up before web can start serving requests
+CMD sleep 7 && exec python /opt/app/manage.py runserver -v3 0.0.0.0:8000
+```
+
+---
+
+# Sample Compose file
+
+```yaml
+web:
+  build:
+    dockerfile: Dockerfile
+    context: .
+  ports:
+   - "8000:8000"
+  links:
+   - db
+  tty: true
+  environment:
+   - POSTGRESQL_DATABASE=django
+   - POSTGRESQL_USER=user
+   - POSTGRESQL_PASSWORD=password
+   - API_KEY
+```
+
+---
+
+# Sample Compose file (cont.)
+
+```yaml
+db:
+  image: registry.access.redhat.com/rhscl/postgresql-95-rhel7
+  volumes:
+   - ./db:/var/lib/pgsql/data
+  environment:
+   - POSTGRESQL_DATABASE=django
+   - POSTGRESQL_USER=user
+   - POSTGRESQL_PASSWORD=password
+```
+
+---
+
+# Dockerfile/docker-compose project
+## Pros
+
+* Wide usage.
+
+* Satisfies (some) requirements.
+
+* Docker Hub contains tons of images.
+
+* Actively developed.
+
+???
+
+* These pros and cons might be subjective.
+
+---
+
+# Dockerfile/docker-compose project
+## Cons
+
+* Compose file is not powerful:
+
+  * Can't run commands easily in containers (e.g. database migration).
+
+  * Can't have dev/prod specific deployments within a single definition file.
+
+  * Service readiness checks are clunky.
+
+  * No variables.
+
+--
+
+* Dockerfile and Compose file are specific to Docker ecosystem.
+
+???
+
+* Start database migration after the database is up and accepting connections.
+* `sleep` or poll
+* can't provision vm, or a rkt container -- locked in to docker platform
+* dockerfiles are full of hacks and are not trivial to master
+
+---
+
+# Dockerfile/docker-compose project
+## Cons (cont.)
+
+* Some Docker Hub images are outdated and lack documentation.
+
+  * Official vs. community.
+
+--
+
+* Shell scripts, blah.
+
+???
+
+* Content: is it secure? What's inside?
+
+---
+
+# Shell script example
+
+--
+
+```bash
+RUN set -eux; \
+	\
+# this "case" statement is generated via "update.sh"
+	%%ARCH-CASE%%; \
+	\
+	url="https://golang.org/dl/go${GOLANG_VERSION}.${goRelArch}.tar.gz"; \
+	wget -O go.tgz "$url"; \
+	echo "${goRelSha256} *go.tgz" | sha256sum -c -; \
+	tar -C /usr/local -xzf go.tgz; \
+	rm go.tgz; \
+	\
+	if [ "$goRelArch" = 'src' ]; then \
+		echo >&2; \
+		echo >&2 'error: UNIMPLEMENTED'; \
+		echo >&2 'TODO install golang-any from jessie-backports for GOROOT_BOOTSTRAP (and uninstall after build)'; \
+		echo >&2; \
+		exit 1; \
+	fi; \
+```
+
+---
+
+# Shell script example (cont.)
+
+```bash
+	\
+	export PATH="/usr/local/go/bin:$PATH"; \
+	go version
+```
+
+Source: https://github.com/docker-library/golang/blob/master/Dockerfile-debian.template#L14
+
+---
+
+# Transition
+
+* Good
+
+  * Full Ansible power.
+
+  * You can utilize your Ansible roles.
+
+* Bad
+
+  * shell → Ansible (`import` command helps here)
+
+  * You may need to learn new things. (is this actually bad?)
+
+  * Some Ansible tasks are more complex than Dockerfile instructions.
+
+???
+
+* Dockerfile - new DSL
+* Compose file - new format, specific to a single platform
+
+---
+
+# COPY vs copy module
+
+```dockerfile
+COPY file /path/inside/image
+```
+
+vs.
+
+```yaml
+ - name: Install file
+   copy:
+     src: file
+     dest: /path/inside/image
+```
+
+---
+# COPY vs copy module
+
+```dockerfile
+COPY file /path/inside/image
+*RUN chmod 0644 /path/inside/image && chown app /path/inside/image
+```
+
+vs.
+
+```yaml
+ - name: Install file
+   copy:
+     src: file
+     dest: /path/inside/image
+*    owner: app
+*    mode: 0644
+```
+
+---
+
+# Ansible Container project
+## Workflow
+
+1. `init`
+
+2. `install`
+
+3. `build`
+
+4. `run`
+
+5. `push`
+
+6. `deploy`
+
+---
+
+
+# Ansible Container project
+## Pros
+
+* Utilize Ansible Container-ready roles from Ansible Galaxy.
+
+  * Not just images, deployable units!
+
+* Support complete lifecycle of the application.
+
+* Use Ansible, the universal markup, to create images.
+
+* Actively developed.
+
+
+---
+
+# Ansible Container project
+## Cons
+
+* Not mature yet.
+
+???
+
+* corner cases
+* complex deployments
+
+---
+
+# Container-enabled Ansible roles
+
+* Define how the Ansible role is meant to be used in container environment.
+
+---
+
+# container.yml
+
+* Single definition of the application.
+
+  * Build images.
+
+  * How to run in development.
+
+  * How to deploy to a production cloud environment.
+
+--
+
+* https://github.com/chouseknecht/django-gulp-nginx/blob/master/container.yml
+
+???
+
+* also configuration of ansible-container
+
+---
+
+# container.yml
+
+```yaml
+defaults:
+  POSTGRES_USER: django
+  POSTGRES_PASSWORD: sesame
+  POSTGRES_DB: django
+  DJANGO_ROOT: /django
+  DJANGO_USER: django
+  DJANGO_PORT: 8080
+  DJANGO_VENV: /venv
+  NODE_USER: node
+  NODE_HOME: /node
+  NODE_ROOT: ''
+  GULP_DEV_PORT: 8080
+```
+
+---
+
+# container.yml (cont.)
+
+```yaml
+services:
+  django:
+    from: 'centos:7'
+    roles:
+    - role: django-gunicorn
+    environment:
+      DATABASE_URL: 'pgsql://{{ POSTGRES_USER }}:{{ POSTGRES_PASSWORD }}@postgresql:5432/{{ POSTGRES_DB }}'
+      DJANGO_ROOT: '{{ DJANGO_ROOT }}'
+      DJANGO_VENV: '{{ DJANGO_VENV }}'
+    expose:
+    - '{{ DJANGO_PORT }}'
+    working_dir: '{{ DJANGO_ROOT }}'
+    links:
+    - postgresql
+    user: '{{ DJANGO_USER }}'
+    command: ['/usr/bin/dumb-init', '{{ DJANGO_VENV }}/bin/gunicorn', -w, '2', -b, '0.0.0.0:{{ DJANGO_PORT }}', 'project.wsgi:application']
+    entrypoint: [/usr/bin/entrypoint.sh]
+```
+
+---
+
+# container.yml
+## Development overrides
+
+```yaml
+  django:
+    dev_overrides:
+      volumes:
+      - '$PWD:{{ DJANGO_ROOT }}'
+      command: [/usr/bin/dumb-init, '{{ DJANGO_VENV }}/bin/python', manage.py, runserver, '0.0.0.0:{{ DJANGO_PORT }}']
+      depends_on:
+      - postgresql
+```
+
+```yaml
+  nginx:
+    dev_overrides:
+      ports: []
+      command: /bin/false
+```
+
+---
+
+# Bright future
+
+* Preparation for 1.0:
+
+  * No conductor rebuilds after every `ansible-container build`.
+
+  * Provide pre-built conductor images based on different distributions.
+
+  * Target images based on Python 3.
+
+--
+
+* Establish ansible-container SIG.
+
+--
+
+* Post 1.0:
+
+  * Keep conductor images up to date.
+
+---
+
+class: center, middle
+
+# We need your feedback!
+
+???
+
+* who have already used ansible-container?
+* what's your use case?
+* how complicated your setup is?
+* would you join the sig?
+
+---
+
+# Thank you!
+
+* <span class="fa fa-github-square"></span> [ansible/ansible-container](https://github.com/ansible/ansible-container)
+
+* <span class="fa fa-github-square"></span> [ansible/ansible-container-demo](https://github.com/ansible/ansible-container-demo)
+
+* `#ansible-container` channel on [irc.freenode.net](https://freenode.net/)
+
+* [https://groups.google.com/forum/#!forum/ansible-container](https://groups.google.com/forum/#!forum/ansible-container)
+
+* <span class="fa fa-github-square"></span> [TomasTomecek/ansiblefest2017-talk](https://github.com/TomasTomecek/ansiblefest2017-talk)
+
+    </textarea>
+    <script src="remark.js">
+    </script>
+    <script>
+      var slideshow = remark.create({
+        ratio: '16:9',
+        highlightLines: true
+      });
+    </script>
+  </body>
+</html>
