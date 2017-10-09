@@ -66,96 +66,39 @@ class: center, middle
 
 # Agenda
 
-1. Dockerfile/docker-compose project.
+1. Dockerfiles and docker-compose.
 
-2. Transition.
+2. Ansible and Ansible Container.
 
-3. Ansible Container project.
+3. Transition.
 
-4. Container-enabled Ansible roles.
+4. Ansible Container deep dive.
 
-5. Bright future.
+5. ~~demo~~
 
 ---
 
-# Requirements
-## For development setup and deployment
+# Dockerfile
 
-* Easy to set up.
-
-  * With a single command.
+* A recipe to create container images.
 
 --
 
-* Consistent environment for every developer.
+* New file-format, different from standards like `json` and `yaml`.
 
-  * Containers
+--
 
-  * The deployment
-
-  * Tests
+* The format itself doesn't have a formal specification.
 
 ???
 
-* Everyone is running the same version of webserver, database, compiler.
-* We also want to run run tests in a container.
+* Dockerfile = metadata + content
+* The only implementation is part of dockerd.
+* Hard to parse
 
 ---
 
-# Requirements
-## For development setup and deployment (cont.)
-
-* Development and production environment.
-
-  * Developers want to iterate quickly.
-
-  * Production environment needs to be rock-solid.
-
---
-
-  * BTW, we also need staging environment.
-
-???
-
-* Are these requirements sane?
-
----
-
-# Dockerfile/docker-compose project
-## Description
-
-* Dockerfile (= custom image) for your application.
-
---
-
-* Service images from Docker Hub.
-
---
-
-* Deployment done with Compose file.
-  * Handcrafted
-
----
-
-# Dockerfile/docker-compose project
-## Examples
-
-* Building the project:
-
-  ```bash
-  $ docker-compose build
-  ```
-
-* Running the project:
-
-  ```bash
-  $ docker-compose up
-  ```
-
----
-
-# Dockerfile/docker-compose project
-## Sample Dockerfile
+# Sample Dockerfile
 
 ```dockerfile
 FROM fedora:25
@@ -168,31 +111,34 @@ RUN useradd -o -u ${USER_ID} django && \
     mkdir -p /opt/app && \
     chown django:django /opt/app
 USER django
-```
 
----
-
-# Dockerfile/docker-compose project
-## Sample Dockerfile (cont.)
-
-```dockerfile
 WORKDIR /opt/app
 COPY ./requirements.txt /opt/app/
 RUN pip install --user -r ./requirements.txt
 COPY ./requirements-devel.txt /opt/app/
 RUN  pip install --user -r ./requirements-devel.txt
+```
+
+???
+
+* instruction syntax
+* backslash
+* sequence
+* scripts * metadata
+* layering
+* cache
+* exec and command forms
+
+---
+
+# Sample Dockerfile (cont.)
+
+```dockerfile
 
 COPY ./install_static_data.sh /opt/app
 COPY ./bower.json /opt/app
 RUN ./install_static_data.sh
-```
 
----
-
-# Dockerfile/docker-compose project
-## Sample Dockerfile (cont.)
-
-```dockerfile
 COPY . /opt/app/
 USER root
 RUN chown -R django:django .
@@ -201,81 +147,61 @@ USER django
 # database needs to be set up before web can start serving requests
 CMD sleep 7 && exec python /opt/app/manage.py runserver -v3 0.0.0.0:8000
 ```
-
 ---
 
-# Sample Compose file
+# Ecosystem
 
-```yaml
-web:
-  build:
-    dockerfile: Dockerfile
-    context: .
-  ports:
-   - "8000:8000"
-  links:
-   - db
-  tty: true
-  environment:
-   - POSTGRESQL_DATABASE=django
-   - POSTGRESQL_USER=user
-   - POSTGRESQL_PASSWORD=password
-   - API_KEY
-```
+* Service images from Docker Hub.
 
----
-
-# Sample Compose file (cont.)
-
-```yaml
-db:
-  image: registry.access.redhat.com/rhscl/postgresql-95-rhel7
-  volumes:
-   - ./db:/var/lib/pgsql/data
-  environment:
-   - POSTGRESQL_DATABASE=django
-   - POSTGRESQL_USER=user
-   - POSTGRESQL_PASSWORD=password
-```
-
----
-
-# Dockerfile/docker-compose project
-## Pros
-
-* Wide usage.
-
-* Satisfies (some) requirements.
-
-* Docker Hub contains tons of images.
-
-* Actively developed.
+  * Huge library
+  * Quality varies
+  * Freshness varies
 
 ???
 
-* These pros and cons might be subjective.
-
----
-
-# Dockerfile/docker-compose project
-## Cons
-
-* Compose file is not powerful:
-
-  * Can't run commands easily in containers (e.g. database migration).
-
-  * Can't have dev/prod specific deployments within a single definition file.
-
-  * Service readiness checks are clunky.
-
-  * No variables.
+* Some Docker Hub images are outdated and lack documentation.
 
 --
 
-* Dockerfile and Compose file are specific to Docker ecosystem.
+* It's common to orchestrate with `docker-compose`
+
+  * hand-crafted docker-compose.yml
+
+---
+
+# Conclussion (the good)
+
+* Wide usage.
+
+* Docker Hub has a big collection of images.
+
+* Actively developed.
+
+* Easy to use.
+
+---
+
+# Conclussion (the bad)
+
+* Can't easily parse dockerfiles.
+
+* Development of Dockerfiles was kind-of frozen. (?)
+
+* Dockerfiles are essentialy just shell scripts + metadata.
+
+* You need to pick a vendor you trust for your images.
+
+* Dockerfiles have some old outstanding issues. (TBD)
+
+* Dockerfiles and `docker-compose` can only be used with docker containers.
 
 ???
 
+* docker-compose
+  * Can't run commands easily in containers (e.g. database migration).
+  * Can't have dev/prod specific deployments within a single definition file.
+  * Service readiness checks are clunky.
+  * No variables.
 * Start database migration after the database is up and accepting connections.
 * `sleep` or poll
 * can't provision vm, or a rkt container -- locked in to docker platform
@@ -283,24 +209,7 @@ db:
 
 ---
 
-# Dockerfile/docker-compose project
-## Cons (cont.)
-
-* Some Docker Hub images are outdated and lack documentation.
-
-  * Official vs. community.
-
---
-
-* Shell scripts, blah.
-
-???
-
-* Content: is it secure? What's inside?
-
----
-
-# Shell script example
+# More complex script example
 
 --
 
@@ -327,7 +236,7 @@ RUN set -eux; \
 
 ---
 
-# Shell script example (cont.)
+# More complex script example (cont.)
 
 ```bash
 	\
@@ -339,17 +248,40 @@ Source: https://github.com/docker-library/golang/blob/master/Dockerfile-debian.t
 
 ---
 
+# Ansible
+
+* Automation platform.
+* No daemons — easy to set up.
+* Machine and human friendly language — yaml.
+* Powerful.
+* Hundreds of modules.
+
+---
+
+# Ansible glossary
+
+* Tasks
+* Playbooks
+* Plays
+* Roles
+
+---
+
 # Transition
 
 * Good
 
   * Full Ansible power.
 
-  * You can utilize your Ansible roles.
+  * You can utilize your (existing) Ansible roles.
+
+  * Those roles can deploy any artifacts.
+
+  * One consistent tool to manage whole infrastructure.
 
 * Bad
 
-  * shell → Ansible (`import` command helps here)
+  * shell → Ansible
 
   * You may need to learn new things. (is this actually bad?)
 
@@ -358,6 +290,7 @@ Source: https://github.com/docker-library/golang/blob/master/Dockerfile-debian.t
 ???
 
 * Dockerfile - new DSL
+* `import` command helps with conversion
 * Compose file - new format, specific to a single platform
 
 ---
@@ -399,7 +332,23 @@ vs.
 ---
 
 # Ansible Container project
-## Workflow
+
+* Building container images from Ansible roles.
+* Utilize existing Ansible Galaxy roles.
+* Complete management of containerized projects.
+* Dev environment overrides.
+* Custom image layering.
+* Doesn't require python in target image.
+* Doesn't require ansible on your host.
+
+???
+
+ * Not just images, deployable units!
+ * conductor container
+
+---
+
+# Workflow
 
 1. `init`
 
@@ -415,41 +364,6 @@ vs.
 
 ---
 
-
-# Ansible Container project
-## Pros
-
-* Utilize Ansible Container-ready roles from Ansible Galaxy.
-
-  * Not just images, deployable units!
-
-* Support complete lifecycle of the application.
-
-* Use Ansible, the universal markup, to create images.
-
-* Actively developed.
-
-
----
-
-# Ansible Container project
-## Cons
-
-* Not mature yet.
-
-???
-
-* corner cases
-* complex deployments
-
----
-
-# Container-enabled Ansible roles
-
-* Define how the Ansible role is meant to be used in container environment.
-
----
-
 # container.yml
 
 * Single definition of the application.
@@ -460,13 +374,11 @@ vs.
 
   * How to deploy to a production cloud environment.
 
+* ansible-container configuration
+
 --
 
 * https://github.com/chouseknecht/django-gulp-nginx/blob/master/container.yml
-
-???
-
-* also configuration of ansible-container
 
 ---
 
@@ -535,34 +447,13 @@ services:
 
 ---
 
-# Bright future
-
-* Preparation for 1.0:
-
-  * No conductor rebuilds after every `ansible-container build`.
-
-  * Provide pre-built conductor images based on different distributions.
-
-  * Target images based on Python 3.
-
---
-
-* Establish ansible-container SIG.
-
---
-
-* Post 1.0:
-
-  * Keep conductor images up to date.
-
----
-
 class: center, middle
 
 # We need your feedback!
 
 ???
 
+* still work in progress
 * who have already used ansible-container?
 * what's your use case?
 * how complicated your setup is?
@@ -580,7 +471,7 @@ class: center, middle
 
 * [https://groups.google.com/forum/#!forum/ansible-container](https://groups.google.com/forum/#!forum/ansible-container)
 
-* <span class="fa fa-github-square"></span> [TomasTomecek/ansiblefest2017-talk](https://github.com/TomasTomecek/ansiblefest2017-talk)
+* <span class="fa fa-github-square"></span> [TomasTomecek/open-source-summit-2017-talk](https://github.com/TomasTomecek/open-source-summit-2017-talk)
 
     </textarea>
     <script src="remark.js">
