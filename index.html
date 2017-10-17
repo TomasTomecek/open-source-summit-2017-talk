@@ -60,7 +60,7 @@ class: center, middle
 
  * Red Hat
 
- * tech lead for containerization team
+ * containerization team
 
 ---
 
@@ -93,7 +93,7 @@ class: center, middle
 ???
 
 * Dockerfile = metadata + content
-* The only implementation is part of dockerd.
+* The only real implementation is part of dockerd.
 * Hard to parse
 
 ---
@@ -124,7 +124,8 @@ RUN  pip install --user -r ./requirements-devel.txt
 * instruction syntax
 * backslash
 * sequence
-* scripts * metadata
+* scripts
+* metadata
 * layering
 * cache
 * exec and command forms
@@ -191,7 +192,7 @@ CMD sleep 7 && exec python /opt/app/manage.py runserver -v3 0.0.0.0:8000
 
 * You need to pick a vendor you trust for your images.
 
-* Dockerfiles have some old outstanding issues. (TBD)
+* Dockerfiles have some old outstanding issues.
 
 * Dockerfiles and `docker-compose` can only be used with docker containers.
 
@@ -204,8 +205,10 @@ CMD sleep 7 && exec python /opt/app/manage.py runserver -v3 0.0.0.0:8000
   * No variables.
 * Start database migration after the database is up and accepting connections.
 * `sleep` or poll
-* can't provision vm, or a rkt container -- locked in to docker platform
-* dockerfiles are full of hacks and are not trivial to master
+* can't provision vm, or a rkt container -- locked in to the docker platform
+* dockerfiles are not trivial to master
+* dockerfiles: caching, layering, COPY && chown && chmod, cannot remove metadata
+* builder: mount during build
 
 ---
 
@@ -289,10 +292,6 @@ Source: https://github.com/docker-library/golang/blob/master/Dockerfile-debian.t
 
 ???
 
-* Dockerfile - new DSL
-* `import` command helps with conversion
-* Compose file - new format, specific to a single platform
-
 ---
 
 # COPY vs copy module
@@ -372,7 +371,7 @@ vs.
 
   * How to run in development.
 
-  * How to deploy to a production cloud environment.
+  * How to deploy to a production environment.
 
 * ansible-container configuration
 
