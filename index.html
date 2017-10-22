@@ -41,8 +41,7 @@ class: center, middle
 
 ---
 
-# /whois
-## Tomáš Tomeček
+# /whois "Tomáš Tomeček"
 
 --
 
@@ -52,15 +51,15 @@ class: center, middle
 
  * ~~ops~~ engineer
 
-???
-
-* Ask who is dev and ops; initiate applause for ops.
-
 --
 
  * Red Hat
 
  * containerization team
+
+???
+
+* Ask who is dev and ops; initiate applause for ops.
 
 ---
 
@@ -92,16 +91,16 @@ class: center, middle
 
 ???
 
-* Dockerfile = metadata + content
+* Dockerfile = metadata + content.
 * The only real implementation is part of dockerd.
-* Hard to parse
+* Not that easy to parse.
 
 ---
 
 # Sample Dockerfile
 
 ```dockerfile
-FROM fedora:25
+FROM registry.fedoraproject.org/fedora:26
 RUN dnf install -y git python-pip gcc python-devel \
     postgresql-devel redhat-rpm-config python2-pytest npm && \
     npm install -g bower
@@ -116,7 +115,7 @@ WORKDIR /opt/app
 COPY ./requirements.txt /opt/app/
 RUN pip install --user -r ./requirements.txt
 COPY ./requirements-devel.txt /opt/app/
-RUN  pip install --user -r ./requirements-devel.txt
+RUN ["pip", "install", "--user", "-r", "./requirements-devel.txt"]
 ```
 
 ???
@@ -126,8 +125,10 @@ RUN  pip install --user -r ./requirements-devel.txt
 * sequence
 * scripts
 * metadata
-* layering
-* cache
+* run (can use only tools which are already in the container)
+* layering (FS-changing insts create new layers)
+* layers are immutable
+* cache (often changing insts last)
 * exec and command forms
 
 ---
@@ -174,11 +175,13 @@ CMD sleep 7 && exec python /opt/app/manage.py runserver -v3 0.0.0.0:8000
 
 * Wide usage.
 
+* Good docs for the tooling.
+
 * Docker Hub has a big collection of images.
 
 * Actively developed.
 
-* Easy to use.
+* Easy to start.
 
 ---
 
@@ -209,6 +212,24 @@ CMD sleep 7 && exec python /opt/app/manage.py runserver -v3 0.0.0.0:8000
 * dockerfiles are not trivial to master
 * dockerfiles: caching, layering, COPY && chown && chmod, cannot remove metadata
 * builder: mount during build
+
+---
+
+# Conclussion (the bad)
+
+* Can't easily parse dockerfiles.
+
+* Development of Dockerfiles was kind-of frozen. (?)
+
+* Dockerfiles are essentialy just shell scripts + metadata.
+
+* You need to pick a vendor you trust for your images.
+
+* Dockerfiles have some old outstanding issues.
+
+* ~~Dockerfiles and `docker-compose` can only be used with docker containers.~~
+
+  * Docker platform and kubernetes
 
 ---
 
@@ -258,6 +279,10 @@ Source: https://github.com/docker-library/golang/blob/master/Dockerfile-debian.t
 * Machine and human friendly language — yaml.
 * Powerful.
 * Hundreds of modules.
+
+???
+
+* powerful thanks to jinja
 
 ---
 
@@ -457,6 +482,25 @@ class: center, middle
 * what's your use case?
 * how complicated your setup is?
 * would you join the sig?
+
+---
+
+# Conclussion
+
+* One tool can't fit everyone.
+
+* Pick the one which suits you best.
+
+* `ansible-container` aiming to hit 1.0 soon.
+
+* `github.com/moby/buildkit`
+
+???
+
+* dockerfiles have limitations
+* upstream doesn't address them
+* but they are aware
+* ansible-container is young
 
 ---
 
