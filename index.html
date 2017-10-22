@@ -195,7 +195,7 @@ CMD sleep 7 && exec python /opt/app/manage.py runserver -v3 0.0.0.0:8000
 
 * You need to pick a vendor you trust for your images.
 
-* Dockerfiles have some old outstanding issues.
+* Dockerfiles have some, old outstanding issues.
 
 * Dockerfiles and `docker-compose` can only be used with docker containers.
 
@@ -225,7 +225,7 @@ CMD sleep 7 && exec python /opt/app/manage.py runserver -v3 0.0.0.0:8000
 
 * You need to pick a vendor you trust for your images.
 
-* Dockerfiles have some old outstanding issues.
+* Dockerfiles have some, old outstanding issues.
 
 * ~~Dockerfiles and `docker-compose` can only be used with docker containers.~~
 
@@ -300,19 +300,14 @@ Source: https://github.com/docker-library/golang/blob/master/Dockerfile-debian.t
 * Good
 
   * Full Ansible power.
-
   * You can utilize your (existing) Ansible roles.
-
   * Those roles can deploy any artifacts.
-
   * One consistent tool to manage whole infrastructure.
 
 * Bad
 
   * shell → Ansible
-
   * You may need to learn new things. (is this actually bad?)
-
   * Some Ansible tasks are more complex than Dockerfile instructions.
 
 ???
@@ -355,13 +350,15 @@ vs.
 
 ---
 
-# Ansible Container project
+# Ansible Container tool
 
+* `github.com/ansible/ansible-container`
 * Building container images from Ansible roles.
 * Utilize existing Ansible Galaxy roles.
 * Complete management of containerized projects.
 * Dev environment overrides.
-* Custom image layering.
+* Adds a single layer on top of your base image by default.
+* Dockerfile → Ansible Role converter.
 * Doesn't require python in target image.
 * Doesn't require ansible on your host.
 
@@ -458,8 +455,6 @@ services:
       volumes:
       - '$PWD:{{ DJANGO_ROOT }}'
       command: [/usr/bin/dumb-init, '{{ DJANGO_VENV }}/bin/python', manage.py, runserver, '0.0.0.0:{{ DJANGO_PORT }}']
-      depends_on:
-      - postgresql
 ```
 
 ```yaml
@@ -491,12 +486,13 @@ class: center, middle
 
 * Pick the one which suits you best.
 
-* `ansible-container` aiming to hit 1.0 soon.
+* `ansible-container` aiming to hit [1.0](https://github.com/ansible/ansible-container/blob/develop/docs/rst/roadmaps/roadmap_1_0_0.rst) soon.
 
 * `github.com/moby/buildkit`
 
 ???
 
+* purpose of AC is to leverage ansible even more for people who already invested in it
 * dockerfiles have limitations
 * upstream doesn't address them
 * but they are aware
