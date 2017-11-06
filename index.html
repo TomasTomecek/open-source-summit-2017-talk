@@ -45,7 +45,7 @@ class: center, middle
 
 --
 
- * hacker, developer, tinker, speaker, teacher
+ * hacker, developer, tinkerer, speaker, teacher
 
  * contributing to *
 
@@ -89,9 +89,10 @@ class: center, middle
 
 * The format itself doesn't have a formal specification.
 
+* [But has a pretty docs.](https://docs.docker.com/engine/reference/builder/)
+
 ???
 
-* Dockerfile = metadata + content.
 * The only real implementation is part of dockerd.
 * Not that easy to parse.
 
@@ -121,10 +122,9 @@ RUN ["pip", "install", "--user", "-r", "./requirements-devel.txt"]
 ???
 
 * instruction syntax
+* Dockerfile = metadata + content.
 * backslash
-* sequence
 * scripts
-* metadata
 * run (can use only tools which are already in the container)
 * layering (FS-changing insts create new layers)
 * layers are immutable
@@ -490,6 +490,8 @@ class: center, middle
 
 * `github.com/moby/buildkit`
 
+* [Linux System Roles](https://github.com/linux-system-roles)
+
 ???
 
 * purpose of AC is to leverage ansible even more for people who already invested in it
@@ -511,6 +513,7 @@ class: center, middle
 * [https://groups.google.com/forum/#!forum/ansible-container](https://groups.google.com/forum/#!forum/ansible-container)
 
 * <span class="fa fa-github-square"></span> [TomasTomecek/open-source-summit-2017-talk](https://github.com/TomasTomecek/open-source-summit-2017-talk)
+* <span class="fa fa-twitter-square"></span> @TomasTomec
 
     </textarea>
     <script src="remark.js">
